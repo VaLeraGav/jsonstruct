@@ -29,11 +29,11 @@ func main() {
 	fmt.Println(err)
 	fmt.Println(acc)
 
-	err = WriteFileStruct("./test.txt", acc)
+	err = WriteStructFile("./test.txt", acc)
 	fmt.Println(acc)
 }
 
-func WriteFileStruct(filename string, strStruct string) error {
+func WriteStructFile(filename string, strStruct string) error {
 	fileNameAbs, err := filepath.Abs(filename)
 	if err != nil {
 		return err
