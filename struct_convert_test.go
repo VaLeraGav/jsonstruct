@@ -21,20 +21,12 @@ func TestStructConvert(t *testing.T) {
 	}{
 		{
 			name: "Check Array",
-			jsonData: `{
-  "query": "Виктор Иван",
-  "count": 7
-}`,
-			expected: `
-type Menuitem struct {
-	Value string ` + "\t`json:\"value\"`" + `
-	Name  string ` + "\t`json:\"name\"`" + `
-}
-type Test struct {
-	Id      string      ` + "\t`json:\"id\"`" + `
-	Value   string      ` + "\t`json:\"value\"`" + `
-	Menuitem` + "\t" + `[]Menuitem ` + "\t`json:\"menuitem\"`" + `
-}`,
+			jsonData: `
+			{
+				"query": "Test",
+				"count": 7
+			}`,
+			expected: ``,
 		},
 		{
 			name: "Check Array",
@@ -42,7 +34,7 @@ type Test struct {
 				"id": "file",
 				"value": "File",
 				"menuitem": [
-						{"value": "New", "name": "New"},
+						{"value": "New"},
 						{"value": "Open", "name": "New"}
 				]
 			}`,
@@ -59,17 +51,40 @@ type Test struct {
 		},
 		{
 			name: "Check Array",
-			jsonData: `{
-	"query": "Виктор Иван",
-	"count": 7,
-	"parts": ["NAME", "SURNAME"]
-	}`,
-			expected: `
-type Generated struct {
-        Query   string ` + "\t`json:\"query\"`" + `
-        Count   int     ` + "\t`json:\"сount\"`" + `
-        Parts   map[string]interface{}  ` + "\t`json:\"parts\"`" + `
-`,
+			jsonData: `
+			{
+				"id": "file",
+				"menuitem":	{
+						"value": "New",
+						"menuitem1":	{
+							"value": "New"
+						}
+						"menuitem2":	{
+							"value": "New"
+						}
+					}
+			}`,
+			expected: ``,
+		},
+		{
+			name: "Check Array",
+			jsonData: `
+			{
+				"query": "Виктор Иван",
+				"count": 7,
+				"parts": ["NAME", "SURNAME"]
+			}`,
+			expected: ``,
+		},
+		{
+			name: "Check Array",
+			jsonData: `
+			{
+				"query": "Виктор Иван",
+				"count": 7,
+				"parts": []
+			}`,
+			expected: ``,
 		},
 	}
 
@@ -91,4 +106,8 @@ type Generated struct {
 
 func prepare(str string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(str, " ", ""), "\t", ""), "\n", "")
+}
+
+func getJson(value string) {
+	return "\t`json:\"" + value + "\"`"
 }

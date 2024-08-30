@@ -1,0 +1,11 @@
+package struct_convert 
+
+ type Parts struct {
+	Sdfsdf	int	`json:"sdfsdf"`
+}
+type GGGGGGG struct {
+	Query	string	`json:"query"`
+	Count	int	`json:"count"`
+	Parts	[]Parts	`json:"parts"`
+}
+

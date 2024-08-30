@@ -4,28 +4,58 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"unicode"
 )
 
-func main() {
-	// jsonStr := `{
-	// "query": "Виктор Иван",
-	// "count": 7,
-	// "parts": [12, 12]
-	// }`
-	jsonStr := `{
-				"id": "file",
-				"value": "File",
-				"menuitem": [
-						{"value": "New", "name": "New"},
-						{"value": "Open", "name": "New"}
-				]
-			}`
+const (
+	stringType     = "string"
+	float64Type    = "int"
+	boolType       = "bool"
+	mapIntType     = "map[interface{}]interface{}"
+	arrIntType     = "[]interface{}"
+	defaultIntType = "interface{}"
+)
 
-	acc, err := StructConvert(jsonStr, "Generated")
+func main() {
+	jsonStr := `{
+	"query": "Виктор Иван",
+	"count": 7,
+	"parts": [{"sdfsdf" : 12}]
+	}`
+
+	acc, err := StructConvert(jsonStr, "GGGGGGG")
 	fmt.Println(err)
 	fmt.Println(acc)
 
+	err = WriteFileStruct("./test.txt", acc)
+	fmt.Println(acc)
+}
+
+func WriteFileStruct(filename string, strStruct string) error {
+	fileNameAbs, err := filepath.Abs(filename)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(fileNameAbs, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	packageName := getPackageName(fileNameAbs)
+
+	strStruct = fmt.Sprintf("package %s \n\n %s", packageName, strStruct)
+
+	fmt.Fprintf(f, "%s\n", strStruct)
+	return nil
+}
+
+func getPackageName(fileNameAbs string) string {
+	dir := filepath.Dir(fileNameAbs)
+	return filepath.Base(dir)
 }
 
 func StructConvert(jsonStr string, nameStruct string) (string, error) {
@@ -46,7 +76,6 @@ func generateStruct(data map[string]interface{}, nameStruct string) (string, err
 	var typeValue string
 	var nameField string
 	var mapInterface map[string]interface{}
-	var firstElem interface{}
 
 	nameStructToUpper := toUpperFirstLetter(nameStruct)
 
@@ -54,42 +83,41 @@ func generateStruct(data map[string]interface{}, nameStruct string) (string, err
 
 	for key, value := range data {
 		nameField = toUpperFirstLetter(key)
-		typeValue = goType(value)
+		typeValue = getType(value)
 
-		if typeValue == "map[string]interface{}" || typeValue == "[]interface{}" {
-			if typeValue == "map[string]interface{}" {
+		if typeValue == mapIntType || typeValue == arrIntType {
+			if typeValue == mapIntType {
 				var ok bool
 				mapInterface, ok = value.(map[string]interface{})
 				if !ok {
-					return "", errors.New("Error: []interface{} -> map[string]interface{}")
+					return "", errors.New("Error format mapInterface: []interface{} -> map[string]interface{}")
 				}
 
 				acc += buildLine(nameField, nameField, key)
 			}
 
-			if typeValue == "[]interface{}" {
+			if typeValue == arrIntType {
 				arrInterface, ok := value.([]interface{})
 				if !ok {
-					return "", errors.New("Error: interface{}  ->  []interface{}")
+					return "", errors.New("Error format arrInterface: interface{}  ->  []interface{}")
 				}
 
 				if len(arrInterface) == 0 {
-					firstElem = arrInterface
-				} else {
-					firstElem = arrInterface[0]
+					acc += buildLine(nameField, arrIntType, key)
+					continue
 				}
 
-				fmt.Println(goType(arrInterface))
+				firstElement := getType(arrInterface[0])
+				if firstElement != mapIntType {
+					acc += buildLine(nameField, arrIntType, key)
+					continue
+				}
 
-				// firstElemType := goType(firstElem)
-				// if goType(firstElem) == "string" {
-				// 	acc += buildLine(nameField, "map[string]interface{}", key)
-				// 	continue
-				// }
+				firstElem := arrInterface[0] // TODO: берет ключи только у первого элемента
 
 				mapInterface, ok = firstElem.(map[string]interface{})
 				if !ok {
-					return "", errors.New("Error: []interface{} -> map[string]interface{}")
+					return "", errors.New("Error format mapInterface from firstElem: []interface{} -> map[string]interface{}")
 				}
 
 				arrayNameField := fmt.Sprintf("[]%s", nameField)
@@ -114,20 +142,20 @@ func buildLine(nameField string, typeValue string, key string) string {
 	return fmt.Sprintf("\t%s\t%s\t`json:\"%s\"`\n", nameField, typeValue, key)
 }
 
-func goType(value interface{}) string {
+func getType(value interface{}) string {
 	switch value.(type) {
 	case string:
-		return "string"
+		return stringType
 	case float64:
-		return "int"
+		return float64Type
 	case bool:
-		return "bool"
+		return boolType
 	case map[string]interface{}:
-		return "map[string]interface{}"
+		return mapIntType
 	case []interface{}:
-		return "[]interface{}"
+		return arrIntType
 	default:
-		return "interface{}"
+		return defaultIntType
 	}
 }
 
