@@ -13,6 +13,8 @@ const (
 	Green = "\033[32m"
 )
 
+// TODO: так как используется range порядок каждый раз меняется
+
 func TestStructConvert(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -20,37 +22,40 @@ func TestStructConvert(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "Check Array",
+			name: "Easy",
 			jsonData: `
-			{
-				"query": "Test",
-				"count": 7
-			}`,
-			expected: ``,
+					{
+						"query": "Test",
+						"count": 7
+					}`,
+			expected: `type Test struct {
+			Query string ` + getJson("query") + `
+			Count int    ` + getJson("count") + `
+		}`,
 		},
 		{
-			name: "Check Array",
+			name: "Multidimensional object",
 			jsonData: `{
-				"id": "file",
-				"value": "File",
-				"menuitem": [
-						{"value": "New"},
-						{"value": "Open", "name": "New"}
-				]
-			}`,
+						"id": "file",
+						"value": "File",
+						"menuitem": [
+								{"value": "New"},
+								{"value": "Open", "name": "New"}
+						]
+					}`,
 			expected: `
-type Menuitem struct {
-	Value string ` + "\t`json:\"value\"`" + `
-	Name  string ` + "\t`json:\"name\"`" + `
-}
-type Test struct {
-	Id      string      ` + "\t`json:\"id\"`" + `
-	Value   string      ` + "\t`json:\"value\"`" + `
-	Menuitem` + "\t" + `[]Menuitem ` + "\t`json:\"menuitem\"`" + `
-}`,
+		type Menuitem struct {
+			Value string ` + getJson("value") + `
+			Name  string ` + getJson("name") + `
+		}
+		type Test struct {
+			Id      string     ` + getJson("id") + `
+			Value   string     ` + getJson("value") + `
+			Menuitem` + "\t" + `[]Menuitem ` + getJson("menuitem") + `
+		}`,
 		},
 		{
-			name: "Check Array",
+			name: "Three levels of nesting an object",
 			jsonData: `
 			{
 				"id": "file",
@@ -58,13 +63,29 @@ type Test struct {
 						"value": "New",
 						"menuitem1":	{
 							"value": "New"
-						}
+						},
 						"menuitem2":	{
 							"value": "New"
 						}
 					}
 			}`,
-			expected: ``,
+			expected: `
+type Menuitem1 struct {
+  Value   string  ` + getJson("value") + `
+}
+type Menuitem2 struct {
+  Value   string  ` + getJson("value") + `
+}
+type Menuitem struct {
+  Menuitem2       Menuitem2     ` + getJson("menuitem2") + `
+  Value   string  							` + getJson("value") + `
+  Menuitem1       Menuitem1     ` + getJson("menuitem1") + `
+}
+type Test struct {
+  Id      string  				  ` + getJson("id") + `
+  Menuitem        Menuitem  ` + getJson("menuitem") + `
+}
+			`,
 		},
 		{
 			name: "Check Array",
@@ -74,7 +95,12 @@ type Test struct {
 				"count": 7,
 				"parts": ["NAME", "SURNAME"]
 			}`,
-			expected: ``,
+			expected: `
+type Test struct {
+	Query   string  ` + getJson("query") + `
+	Count   int     ` + getJson("count") + `
+	Parts   []interface{}   ` + getJson("parts") + `
+}`,
 		},
 		{
 			name: "Check Array",
@@ -84,7 +110,12 @@ type Test struct {
 				"count": 7,
 				"parts": []
 			}`,
-			expected: ``,
+			expected: `
+type Test struct {
+	Query   string  ` + getJson("query") + `
+	Count   int     ` + getJson("count") + `
+	Parts   []interface{}   ` + getJson("parts") + `
+}`,
 		},
 	}
 
@@ -99,7 +130,9 @@ type Test struct {
 		expectedPrepare := prepare(tc.expected)
 
 		if outputPrepare != expectedPrepare {
-			t.Errorf("\nInput: \n%s\nStructConvert: \n%s\n Expected:\n%s\n", tc.jsonData, Green+outputPrepare+Reset, Red+expectedPrepare+Reset)
+			t.Errorf("\nName: \n%s\nInput: \n%s\nStructConvert: \n%s\n Expected:\n%s\n \n==================================",
+				tc.name, tc.jsonData, Green+result+Reset, Red+tc.expected+Reset,
+			)
 		}
 	}
 }
@@ -108,6 +141,6 @@ func prepare(str string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(str, " ", ""), "\t", ""), "\n", "")
 }
 
-func getJson(value string) {
+func getJson(value string) string {
 	return "\t`json:\"" + value + "\"`"
 }

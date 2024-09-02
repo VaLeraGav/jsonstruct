@@ -1,4 +1,4 @@
-package main
+package struct_convert
 
 import (
 	"encoding/json"
@@ -18,19 +18,17 @@ const (
 	defaultIntType = "interface{}"
 )
 
-func main() {
-	jsonStr := `{
-	"query": "Виктор Иван",
-	"count": 7,
-	"parts": [{"sdfsdf" : 12}]
-	}`
-
-	acc, err := StructConvert(jsonStr, "GGGGGGG")
-	fmt.Println(err)
-	fmt.Println(acc)
-
-	err = WriteStructFile("./test.txt", acc)
-	fmt.Println(acc)
+func StructConvert(jsonStr string, nameStruct string) (string, error) {
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(jsonStr), &result)
+	if err != nil {
+		return "", fmt.Errorf("Unmarshal: %w", err)
+	}
+	acc, err := generateStruct(result, nameStruct)
+	if err != nil {
+		return "", fmt.Errorf("generateStruct: %w", err)
+	}
+	return acc, nil
 }
 
 func WriteStructFile(filename string, strStruct string) error {
@@ -56,19 +54,6 @@ func WriteStructFile(filename string, strStruct string) error {
 func getPackageName(fileNameAbs string) string {
 	dir := filepath.Dir(fileNameAbs)
 	return filepath.Base(dir)
-}
-
-func StructConvert(jsonStr string, nameStruct string) (string, error) {
-	var result map[string]interface{}
-	err := json.Unmarshal([]byte(jsonStr), &result)
-	if err != nil {
-		return "", err
-	}
-	acc, err := generateStruct(result, nameStruct)
-	if err != nil {
-		return "", err
-	}
-	return acc, nil
 }
 
 func generateStruct(data map[string]interface{}, nameStruct string) (string, error) {
