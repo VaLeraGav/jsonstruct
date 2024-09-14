@@ -24,19 +24,6 @@ var (
 	ErrConvertInterfaceToArray = errors.New("error format : interface{}  ->  []interface{}")
 )
 
-func main() {
-	jsonStr := `{
-	"query": "Виктор Иван",
-	"count": 7,
-	"parts": [{"count" : 12}]
-	}`
-
-	acc, err := Convert(jsonStr, "Name")
-	fmt.Println(err)
-	fmt.Println(acc)
-
-}
-
 func Convert(jsonStr string, nameStruct string) (string, error) {
 	var result map[string]interface{}
 	err := json.Unmarshal([]byte(jsonStr), &result)
