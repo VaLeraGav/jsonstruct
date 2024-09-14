@@ -1,3 +1,3 @@
-module github.com/VaLeraGav/struct_convert
+module github.com/VaLeraGav/jsonstruct
 
-go 1.23.0
+go 1.22.7

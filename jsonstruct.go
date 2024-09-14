@@ -1,4 +1,4 @@
-package struct_convert
+package main
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"unicode"
 )
 
@@ -13,16 +14,34 @@ const (
 	stringType     = "string"
 	float64Type    = "int"
 	boolType       = "bool"
-	mapIntType     = "map[interface{}]interface{}"
+	mapIntType     = "map[string]interface{}"
 	arrIntType     = "[]interface{}"
 	defaultIntType = "interface{}"
 )
 
-func StructConvert(jsonStr string, nameStruct string) (string, error) {
+var (
+	ErrConvertInterfaceToMap   = errors.New("error format : []interface{} -> map[string]interface{}")
+	ErrConvertInterfaceToArray = errors.New("error format : interface{}  ->  []interface{}")
+)
+
+func main() {
+	jsonStr := `{
+	"query": "Виктор Иван",
+	"count": 7,
+	"parts": [{"count" : 12}]
+	}`
+
+	acc, err := Convert(jsonStr, "Name")
+	fmt.Println(err)
+	fmt.Println(acc)
+
+}
+
+func Convert(jsonStr string, nameStruct string) (string, error) {
 	var result map[string]interface{}
 	err := json.Unmarshal([]byte(jsonStr), &result)
 	if err != nil {
-		return "", fmt.Errorf("Unmarshal: %w", err)
+		return "", fmt.Errorf("unmarshal: %w", err)
 	}
 	acc, err := generateStruct(result, nameStruct)
 	if err != nil {
@@ -31,7 +50,7 @@ func StructConvert(jsonStr string, nameStruct string) (string, error) {
 	return acc, nil
 }
 
-func WriteStructFile(filename string, strStruct string) error {
+func WriteFile(filename string, strStruct string) error {
 	fileNameAbs, err := filepath.Abs(filename)
 	if err != nil {
 		return err
@@ -64,9 +83,16 @@ func generateStruct(data map[string]interface{}, nameStruct string) (string, err
 
 	nameStructToUpper := toUpperFirstLetter(nameStruct)
 
+	keys := make([]string, 0, len(data))
+	for key := range data {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	acc += fmt.Sprintf("type %s struct {\n", nameStructToUpper)
 
-	for key, value := range data {
+	for _, key := range keys {
+		value := data[key]
 		nameField = toUpperFirstLetter(key)
 		typeValue = getType(value)
 
@@ -75,7 +101,7 @@ func generateStruct(data map[string]interface{}, nameStruct string) (string, err
 				var ok bool
 				mapInterface, ok = value.(map[string]interface{})
 				if !ok {
-					return "", errors.New("Error format mapInterface: []interface{} -> map[string]interface{}")
+					return "", fmt.Errorf("mapInterface: %w", ErrConvertInterfaceToMap)
 				}
 
 				acc += buildLine(nameField, nameField, key)
@@ -84,7 +110,7 @@ func generateStruct(data map[string]interface{}, nameStruct string) (string, err
 			if typeValue == arrIntType {
 				arrInterface, ok := value.([]interface{})
 				if !ok {
-					return "", errors.New("Error format arrInterface: interface{}  ->  []interface{}")
+					return "", fmt.Errorf("arrInterface: %w", ErrConvertInterfaceToArray)
 				}
 
 				if len(arrInterface) == 0 {
@@ -98,11 +124,14 @@ func generateStruct(data map[string]interface{}, nameStruct string) (string, err
 					continue
 				}
 
-				firstElem := arrInterface[0] // TODO: берет ключи только у первого элемента
+				// TODO:ошибка если длинный массив с повторами
+				idLongestArray := longestMap(arrInterface)
+
+				firstElem := arrInterface[idLongestArray]
 
 				mapInterface, ok = firstElem.(map[string]interface{})
 				if !ok {
-					return "", errors.New("Error format mapInterface from firstElem: []interface{} -> map[string]interface{}")
+					return "", fmt.Errorf("mapInterface from firstElem: %w", ErrConvertInterfaceToMap)
 				}
 
 				arrayNameField := fmt.Sprintf("[]%s", nameField)
@@ -121,6 +150,22 @@ func generateStruct(data map[string]interface{}, nameStruct string) (string, err
 
 	acc += "}\n"
 	return acc, nil
+}
+
+func longestMap(maps []interface{}) int {
+	longestLength := 0
+	idLongestMap := 0
+
+	for id, item := range maps {
+		if m, ok := item.(map[string]interface{}); ok {
+			if len(m) > longestLength {
+				longestLength = len(m)
+				idLongestMap = id
+			}
+		}
+	}
+
+	return idLongestMap
 }
 
 func buildLine(nameField string, typeValue string, key string) string {
